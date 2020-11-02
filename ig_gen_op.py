@@ -24,7 +24,7 @@ class WM_OT_GenIcicle(Operator):
             radius2 = 0.0,
             depth = cone_depth,
             end_fill_type = cone_cap,
-            view_align = False,
+            align = 'WORLD',
             # Adjust the Z-height to account for the depth of the cone
             # As pivot point is in the centre of the mesh
             location = loc_vector - (cone_depth / 2) * Vector((0, 0, 1)),
@@ -186,12 +186,17 @@ class WM_OT_GenIcicle(Operator):
         obj = context.active_object
         
         if obj and obj.type == 'MESH':
-            check = self.runIt(context, myprop)
-            
-            if check is False:
-                self.report({'INFO'}, "Operation could not be completed")
+            if obj.mode != 'EDIT':
+                self.report({'INFO'}, "Icicles cannot be added outside Edit mode")
+            else:
+                check = self.runIt(context, myprop)
                 
-            if self.verticalEdges:
-                self.report({'INFO'}, "Some vertical edges were skipped during icicle creation")
+                if check is False:
+                    self.report({'INFO'}, "Operation could not be completed")
+                    
+                if self.verticalEdges:
+                    self.report({'INFO'}, "Some vertical edges were skipped during icicle creation")
+        else:
+            self.report({'INFO'}, "Cannot generate on non-Mesh object")
         
         return {'FINISHED'}

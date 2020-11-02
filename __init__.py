@@ -98,7 +98,7 @@ class MyProperties(PropertyGroup):
     on_selected_edges: BoolProperty(
         name='Only add to selected edges',
         description='Add icicles to selected edges only. Otherwise, applied to all edges in mesh',
-        default=False
+        default=True
     )
 
     add_cap: EnumProperty(
