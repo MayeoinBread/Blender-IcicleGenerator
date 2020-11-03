@@ -40,13 +40,13 @@ class WM_OT_GenIcicle(Operator):
     def add_icicles(self, context, my_props):
         obj = context.object
         bm = bmesh.from_edit_mesh(obj.data)
-        wm = obj.matrix_world
+        world_matrix = obj.matrix_world
         
         # Get the verts by checking the selected edge
         edge_verts = [v for v in bm.verts if v.select]
         # Make sure we only have 2 verts to use
         if len(edge_verts) != 2:
-            print('Incorrect number of verts selected. Expected 2, found ' + str(len(edge_verts)))
+            print('Incorrect number of verts selected. Expected 2, found {}'.format(len(edge_verts)))
             return
         
         # vertex coordinates
@@ -54,16 +54,14 @@ class WM_OT_GenIcicle(Operator):
         v2 = edge_verts[1].co
 
         # World matrix for positioning
-        pos1 = wm @ v1
-        pos2 = wm @ v2
+        pos1 = world_matrix @ v1
+        pos2 = world_matrix @ v2
 
-        vm = pos1 - pos2
+        # Total length of current edge
+        total_length = (pos1 - pos2).length
         
         # current length
-        l = 0.0
-        # Total length of current edge
-        t_length = vm.length
-        
+        c_length = 0.0
         # Randomise the difference between radii, add it to the min and don't go over the max value
         rad_dif = my_props.max_rad - my_props.min_rad
         rand_rad = min(my_props.min_rad + (rad_dif * random.random()), my_props.max_rad)
@@ -72,7 +70,7 @@ class WM_OT_GenIcicle(Operator):
         depth_dif = my_props.max_depth - my_props.min_depth
         rand_depth = min(my_props.min_depth + (depth_dif * random.random()), my_props.max_depth)
 
-        # Get user iterations
+        # Get user iterations Max
         iterations = my_props.max_its
         # Counter for iterations
         c = 0
@@ -86,16 +84,19 @@ class WM_OT_GenIcicle(Operator):
         edge_points = []
 
         c = 0
-        while l < t_length and c < iterations:
+        while c_length < total_length and c < iterations:
+            # Check that 2 * min_rad can fit inside the remaining space
+            if (total_length - c_length) < (2 * my_props.min_rad):
+                break
             # Check depth is bigger then radius
             # Icicles generally longer than wider
             if it_depth > it_rad:
                 # Check that we won't overshoot the length of the line
                 # By using a cone of this radius
-                if l + (2 * it_rad) <= t_length:
-                    l += it_rad
-                    t_co = pos2 + (l / t_length) * vm
-                    l += it_rad
+                if c_length + (2 * it_rad) <= total_length:
+                    c_length += it_rad
+                    t_co = pos2 + (c_length / total_length) * (pos1 - pos2)
+                    c_length += it_rad
                     # Set up a random variable to offset the subdivisions on the icicle if added
                     t_rand = min(it_rad * 0.45, it_rad) * self.pos_neg()
                     edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
@@ -108,7 +109,7 @@ class WM_OT_GenIcicle(Operator):
             # Increment by 1, check for max reached
             c += 1
             if c >= iterations:
-                print ('Maximumiterations reached on edge')
+                print ('Maximum iterations reached on edge')
 
         # Loop through list of calculated points and add a cone
         # Then subdivide and shift to alter the straightness
@@ -147,26 +148,32 @@ class WM_OT_GenIcicle(Operator):
         
         # List of initial edges
         if my_props.on_selected_edges:
-            oEdge = [e for e in bm.edges if e.select]
+            original_edges = [e for e in bm.edges if e.select]
         else:
-            oEdge = [e for e in bm.edges]
+            original_edges = [e for e in bm.edges]
     
-        for e in oEdge:
+        for idx, m_edge in enumerate(original_edges):
             # Check for vertical edge before working on it
-            if e.verts[0].co.x == e.verts[1].co.x and e.verts[0].co.y == e.verts[1].co.y:
-                self.verticalEdges = True
+            e1_2d = Vector((m_edge.verts[0].co.x, m_edge.verts[0].co.y))
+            e2_2d = Vector((m_edge.verts[1].co.x, m_edge.verts[1].co.y))
+            d_2d = (e1_2d - e2_2d).length
+            
+            # Check that edge is long enough to fit the smallest cone
+            if d_2d <= 2 * my_props.min_rad:
+                # print("{} - Edge too small".format(idx))
                 continue
+
             # Deselect everything and select the current edge
             bpy.ops.mesh.select_all(action='DESELECT')
             bm.edges.ensure_lookup_table()
-            e.select = True
+            m_edge.select = True
             self.add_icicles(context, my_props)
         
         # Reselect the initial selection if desired
         if my_props.reselect_base:
             bpy.ops.mesh.select_all(action='DESELECT')
             bm.edges.ensure_lookup_table()
-            for e in oEdge:
+            for e in original_edges:
                 e.select = True
 
     def execute(self, context):
@@ -189,13 +196,10 @@ class WM_OT_GenIcicle(Operator):
             if obj.mode != 'EDIT':
                 self.report({'INFO'}, "Icicles cannot be added outside Edit mode")
             else:
-                check = self.runIt(context, myprop)
+                self.runIt(context, myprop)
                 
-                if check is False:
-                    self.report({'INFO'}, "Operation could not be completed")
-                    
                 if self.verticalEdges:
-                    self.report({'INFO'}, "Some vertical edges were skipped during icicle creation")
+                    self.report({'INFO'}, "Some edges were skipped during icicle creation - line too steep")
         else:
             self.report({'INFO'}, "Cannot generate on non-Mesh object")
         
