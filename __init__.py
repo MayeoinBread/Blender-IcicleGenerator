@@ -112,6 +112,16 @@ class MyProperties(PropertyGroup):
         default='NGON'
     )
 
+    direction: EnumProperty(
+        name='Points',
+        description='Set whether icicles point up or down',
+        items=[
+            ('Up', 'Up', 'Icicles point upwards'),
+            ('Down', 'Down', 'Icicles point downwards (default)')
+        ],
+        default='Down'
+    )
+
 #classes = [MyProperties, OBJECT_PT_CustomPanel, OT_draw_operator, WM_OT_GenIcicle]
 classes = [MyProperties, OBJECT_PT_CustomPanel, WM_OT_GenIcicle]
 
