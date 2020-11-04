@@ -17,7 +17,9 @@ class WM_OT_GenIcicle(Operator):
     ##
     # Add cone function
     ##
-    def add_cone(self, num_verts, loc_vector, base_rad, cone_depth, cone_cap):
+    def add_cone(self, num_verts, loc_vector, base_rad, cone_depth, cone_cap, direction):
+        rot = (0.0 if direction == 'Up' else pi, 0.0, 0.0)
+        loc = loc_vector + (cone_depth / 2) * Vector((0, 0, 1)) if direction == 'Up' else loc_vector - (cone_depth / 2) * Vector((0, 0, 1))
         bpy.ops.mesh.primitive_cone_add(
             vertices = num_verts,
             radius1 = base_rad,
@@ -27,8 +29,9 @@ class WM_OT_GenIcicle(Operator):
             align = 'WORLD',
             # Adjust the Z-height to account for the depth of the cone
             # As pivot point is in the centre of the mesh
-            location = loc_vector - (cone_depth / 2) * Vector((0, 0, 1)),
-            rotation = (pi, 0.0, 0.0))
+            location = loc,
+            rotation = rot
+            )
 
     # Get z co-ordinate, used for sorting
     def get_z(self, vert):
@@ -114,7 +117,7 @@ class WM_OT_GenIcicle(Operator):
         # Then subdivide and shift to alter the straightness
         for cpoint, rad, depth, cuts, offset in edge_points:
             # Add the cone
-            self.add_cone(my_props.num_verts, cpoint, rad, depth, my_props.add_cap)
+            self.add_cone(my_props.num_verts, cpoint, rad, depth, my_props.add_cap, my_props.direction)
             # Check that we're going to subdivide, and that we're going to shift them a noticable amount
             if cuts > 0 and abs(offset) > 0.02:
                 bm.edges.ensure_lookup_table()

@@ -49,6 +49,8 @@ class OBJECT_PT_CustomPanel(Panel):
 
         layout.prop(myprop, 'reselect_base')
 
+        layout.prop(myprop, 'direction')
+
         row = layout.row()
         # row.operator('object.draw_op', text='Draw', icon='GPBRUSH_PEN')
         row.operator('wm.gen_icicle', text='Generate', icon='PHYSICS')
