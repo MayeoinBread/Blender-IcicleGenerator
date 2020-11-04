@@ -6,6 +6,19 @@ from mathutils import Vector
 from math import pi
 import random
 
+
+def check_same_2d(m_edge, min_rad):
+    # Return True if verts are too close together
+    e1_2d = Vector(((m_edge.verts[0].co.x, m_edge.verts[0].co.y)))
+    e2_2d = Vector(((m_edge.verts[1].co.x, m_edge.verts[1].co.y)))
+    d_2d = (e1_2d - e2_2d).length
+    
+    # Check that edge is long enough to fit the smallest cone
+    if d_2d <= 2 * min_rad:
+        return True
+    return False
+
+
 class WM_OT_GenIcicle(Operator):
     bl_idname = 'wm.gen_icicle'
     bl_label = 'Generate Icicles'
@@ -157,13 +170,12 @@ class WM_OT_GenIcicle(Operator):
     
         for idx, m_edge in enumerate(original_edges):
             # Check for vertical edge before working on it
-            e1_2d = Vector((m_edge.verts[0].co.x, m_edge.verts[0].co.y))
-            e2_2d = Vector((m_edge.verts[1].co.x, m_edge.verts[1].co.y))
-            d_2d = (e1_2d - e2_2d).length
-            
-            # Check that edge is long enough to fit the smallest cone
-            if d_2d <= 2 * my_props.min_rad:
+            if check_same_2d(m_edge, my_props.min_rad):
                 # print("{} - Edge too small".format(idx))
+                if abs(m_edge.verts[0].co.z - m_edge.verts[1].co.z) > my_props.min_depth:
+                    self.vertical_edges = True
+                else:
+                    self.short_edge = True
                 continue
 
             # Deselect everything and select the current edge
@@ -181,7 +193,7 @@ class WM_OT_GenIcicle(Operator):
 
     def execute(self, context):
         scene = bpy.context.scene
-        myprop = scene.my_props
+        myprop = scene.icegen_props
 
         # Check variables aren't bigger than they should be
         if myprop.min_rad > myprop.max_rad:
@@ -190,7 +202,8 @@ class WM_OT_GenIcicle(Operator):
         if myprop.min_depth > myprop.max_depth:
             myprop.max_depth = myprop.min_depth
         
-        self.verticalEdges = False
+        self.vertical_edges = False
+        self.short_edge = False
 
         # Run the function
         obj = context.active_object
@@ -201,8 +214,10 @@ class WM_OT_GenIcicle(Operator):
             else:
                 self.runIt(context, myprop)
                 
-                if self.verticalEdges:
+                if self.vertical_edges:
                     self.report({'INFO'}, "Some edges were skipped during icicle creation - line too steep")
+                if self.short_edge:
+                    self.report({'INFO'}, "Some edges were skipped during icicle creation - edge too short")
         else:
             self.report({'INFO'}, "Cannot generate on non-Mesh object")
         

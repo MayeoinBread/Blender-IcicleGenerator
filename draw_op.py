@@ -8,23 +8,28 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 from bpy.types import Operator
+from mathutils import Vector
 
-class OT_draw_operator(Operator):
-    bl_idname = "object.draw_op"
-    bl_label = "Draw operator"
-    bl_description = "Operator for drawing" 
+from . ig_gen_op import check_same_2d
+
+# class OT_draw_operator(Operator):
+class OT_Draw_Preview(Operator):
+    bl_idname = "wm.icicle_preview"
+    bl_label = "Icicle preview"
+    bl_description = "Operator for drawing icicle previews"
     bl_options = {'REGISTER'}
 
     @classmethod
     def poll(cls, context):
-        if context.object == None:
-            return True
-
-        return context.object.mode == 'EDIT'
-    	
+        ob = context.object
+        return (ob and ob.mode == 'EDIT')
+        
     def __init__(self):
         self.draw_handle_3d = None
         self.draw_event  = None
+
+        self.ice_props = bpy.context.scene.icegen_props
+        self.vert_array = []
 
         self.create_batch()
 
@@ -56,9 +61,14 @@ class OT_draw_operator(Operator):
         if context.area:
             context.area.tag_redraw()
 
-        if event.type == 'ESC' and event.value == 'PRESS':
+        if not self.ice_props.preview_btn_tgl:
             self.unregister_handlers(context)
             return {'FINISHED'}
+
+        if event.type in {'ESC'}:
+            self.unregister_handlers(context)
+            self.ice_props.preview_btn_tgl = False
+            return {'CANCELLED'}
         
         return {'PASS_THROUGH'}
 
@@ -66,32 +76,17 @@ class OT_draw_operator(Operator):
         self.unregister_handlers(bpy.context)
         return {'FINISHED'}
 
-    def points_same_2d(self, edge):
-        v1 = edge.verts[0]
-        v2 = edge.verts[1]
-
-        equal = v1.co.x == v2.co.x and v1.co.y == v2.co.y
-
-        return equal
-
-
     def create_batch(self):
         obj = bpy.context.object
         bm = bmesh.from_edit_mesh(obj.data)
         wm = obj.matrix_world
 
-        scene = bpy.context.scene
-        myprop = scene.my_props
+        # self.vert_array = []
 
-        self.min_array = []
-        self.max_array = []
-
-        self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-
-        if myprop.on_selected_edges:
-            s_edges = [e for e in bm.edges if e.select and not self.points_same_2d(e)]
+        if self.ice_props.on_selected_edges:
+            s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, self.ice_props.min_rad)]
         else:
-            s_edges = [e for e in bm.edges if not self.points_same_2d(e)]
+            s_edges = [e for e in bm.edges if not check_same_2d(e, self.ice_props.min_rad)]
 
         for e in s_edges:
             v1 = wm @ e.verts[0].co
@@ -101,32 +96,32 @@ class OT_draw_operator(Operator):
 
             mid_point = (v1 + v2) * 0.5
 
-            min_icicle = [
-                mid_point + (myprop.min_rad / 2) * v_dir,
-                mid_point - myprop.min_depth * Vector((0, 0, 1)),
-                mid_point - (myprop.min_rad / 2) * v_dir
-            ]
-
-            max_icicle = [
-                mid_point + (myprop.max_rad / 2) * v_dir,
-                #(mid_point.x, mid_point.y, mid_point.z - myprop.max_depth),
-                mid_point - myprop.max_depth * Vector((0, 0, 1)),
-                mid_point - (myprop.max_rad / 2) * v_dir
-            ]
-
-            self.min_array.append(batch_for_shader(self.shader, 'LINE_STRIP', {'pos':min_icicle}))
-            self.max_array.append(batch_for_shader(self.shader, 'LINE_STRIP', {'pos':max_icicle}))
+            self.vert_array.append((mid_point, v_dir))
 
     def draw_callback_3d(self, op, context):
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        shader.bind()
+
         bgl.glEnable(bgl.GL_LINE_SMOOTH)
-        self.shader.bind()
+        bgl.glLineWidth(1.5)
 
-        self.shader.uniform_float('color', (1, 0, 0, 1))
-        bgl.glLineWidth(1)
-        for b_min in self.min_array:
-            b_min.draw(self.shader)
+        m_dir = -1 if self.ice_props.direction == 'Up' else 1
 
-        self.shader.uniform_float('color', (0, 1, 0, 1))
-        bgl.glLineWidth(2)
-        for b_max in self.max_array:
-            b_max.draw(self.shader)
+        for mid_point, v_dir in self.vert_array:
+            shader.uniform_float('color', (0, 1, 1, 1))
+            min_icicle = [
+                mid_point + (self.ice_props.min_rad * v_dir),
+                mid_point - (m_dir * self.ice_props.min_depth * Vector((0, 0, 1))),
+                mid_point - (self.ice_props.min_rad * v_dir)
+            ]
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle})
+            batch.draw(shader)
+            shader.uniform_float('color', (0, 0, 1, 1))
+            max_icicle = [
+                mid_point + (self.ice_props.max_rad * v_dir),
+                mid_point - (m_dir * self.ice_props.max_depth * Vector((0, 0, 1))),
+                mid_point - (self.ice_props.max_rad * v_dir)
+            ]
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":max_icicle})
+            batch.draw(shader)
+

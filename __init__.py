@@ -25,10 +25,16 @@ from bpy.types import PropertyGroup
 # import all teh ops and stuff
 from . ig_panel import OBJECT_PT_CustomPanel
 from . ig_gen_op import WM_OT_GenIcicle
-# from . draw_op import OT_draw_operator
+from . draw_op import OT_Draw_Preview
 
 # Properties class to hold required parameters
 class MyProperties(PropertyGroup):
+
+    def tgl_update_fnc(self, context):
+        if self.preview_btn_tgl:
+            bpy.ops.wm.icicle_preview('INVOKE_DEFAULT')
+        return
+
     max_rad: FloatProperty(
         name='Max Radius',
         description='Maximum radius of a cone',
@@ -122,9 +128,15 @@ class MyProperties(PropertyGroup):
         default='Down'
     )
 
-#classes = [MyProperties, OBJECT_PT_CustomPanel, OT_draw_operator, WM_OT_GenIcicle]
-classes = [MyProperties, OBJECT_PT_CustomPanel, WM_OT_GenIcicle]
+    preview_btn_tgl: BoolProperty(
+        name='PreviewTgl',
+        default=False,
+        update=tgl_update_fnc,
+        description='Toggle preview of max/min dimensions in 3D view'
+    )
 
+classes = [MyProperties, OBJECT_PT_CustomPanel, OT_Draw_Preview, WM_OT_GenIcicle]
+# classes = [MyProperties, OBJECT_PT_CustomPanel, WM_OT_GenIcicle]
 
 # Register/unregister classes
 def register():
@@ -132,11 +144,11 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Scene.my_props = PointerProperty(type=MyProperties)
+    bpy.types.Scene.icegen_props = PointerProperty(type=MyProperties)
 
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
 
-    del bpy.types.Scene.my_props
+    del bpy.types.Scene.icegen_props

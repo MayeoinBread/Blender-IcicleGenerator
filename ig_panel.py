@@ -15,8 +15,7 @@ class OBJECT_PT_CustomPanel(Panel):
 
     def draw(self, context):
         layout = self.layout
-        scene = context.scene
-        myprop = scene.my_props
+        myprop = context.scene.icegen_props
 
         row = layout.row()
         layout.prop(myprop, 'on_selected_edges')
@@ -51,6 +50,9 @@ class OBJECT_PT_CustomPanel(Panel):
 
         layout.prop(myprop, 'direction')
 
+        label = "Preview On" if myprop.preview_btn_tgl else "Preview Off"
+        layout.prop(myprop, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
+
         row = layout.row()
-        # row.operator('object.draw_op', text='Draw', icon='GPBRUSH_PEN')
+        # row.operator('object.draw_op', text='Preview', icon='GPBRUSH_PEN')
         row.operator('wm.gen_icicle', text='Generate', icon='PHYSICS')
