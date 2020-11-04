@@ -61,10 +61,12 @@ class OT_Draw_Preview(Operator):
         if context.area:
             context.area.tag_redraw()
 
+        # Check toggle button to finish showing preview
         if not self.ice_props.preview_btn_tgl:
             self.unregister_handlers(context)
             return {'FINISHED'}
 
+        # Check ESC key press to cancel preview
         if event.type in {'ESC'}:
             self.unregister_handlers(context)
             self.ice_props.preview_btn_tgl = False
@@ -72,43 +74,37 @@ class OT_Draw_Preview(Operator):
         
         return {'PASS_THROUGH'}
 
-    def finish(self):
-        self.unregister_handlers(bpy.context)
-        return {'FINISHED'}
-
     def create_batch(self):
         obj = bpy.context.object
         bm = bmesh.from_edit_mesh(obj.data)
         wm = obj.matrix_world
 
-        # self.vert_array = []
-
+        # Get edges based on selection criteria
         if self.ice_props.on_selected_edges:
             s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, self.ice_props.min_rad)]
         else:
             s_edges = [e for e in bm.edges if not check_same_2d(e, self.ice_props.min_rad)]
 
+        # Find midpoint of each edge to position preview of icicles
         for e in s_edges:
-            v1 = wm @ e.verts[0].co
-            v2 = wm @ e.verts[1].co
-
-            v_dir = (v2 - v1).normalized() @ wm
-
-            mid_point = (v1 + v2) * 0.5
-
+            v_dir = (e.verts[0].co - e.verts[1].co).normalized() @ wm
+            mid_point = (e.verts[0].co + e.verts[1].co) * 0.5
             self.vert_array.append((mid_point, v_dir))
 
     def draw_callback_3d(self, op, context):
         shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         shader.bind()
 
-        bgl.glEnable(bgl.GL_LINE_SMOOTH)
+        # Don't use XRay mode
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
         bgl.glLineWidth(1.5)
 
+        # Get direction
         m_dir = -1 if self.ice_props.direction == 'Up' else 1
 
         for mid_point, v_dir in self.vert_array:
             shader.uniform_float('color', (0, 1, 1, 1))
+            # min size icicle
             min_icicle = [
                 mid_point + (self.ice_props.min_rad * v_dir),
                 mid_point - (m_dir * self.ice_props.min_depth * Vector((0, 0, 1))),
@@ -116,7 +112,9 @@ class OT_Draw_Preview(Operator):
             ]
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle})
             batch.draw(shader)
+
             shader.uniform_float('color', (0, 0, 1, 1))
+            # max size icicle
             max_icicle = [
                 mid_point + (self.ice_props.max_rad * v_dir),
                 mid_point - (m_dir * self.ice_props.max_depth * Vector((0, 0, 1))),
