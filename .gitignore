@@ -1,0 +1,6 @@
+.vscode/.ropeproject/config.py
+.vscode/.ropeproject/objectdb
+__pycache__/__init__.cpython-37.pyc
+__pycache__/draw_op.cpython-37.pyc
+__pycache__/ig_gen_op.cpython-37.pyc
+__pycache__/ig_panel.cpython-37.pyc

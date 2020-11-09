@@ -1,3 +1,16 @@
+bl_info = {
+    "name":"Icicle Generator",
+    "author":"Eoin Brennan (Mayeoin Bread)",
+    "version":(2,6),
+    "blender":(2,90,0),
+    "location":"3D View > Tools",
+    "description":"Add icicles of varying widths & heights to selected non-vertical edges",
+    "warning":"",
+    "wiki_url":"",
+    "tracker_url":"",
+    "category":"Add Mesh"
+    }
+
 import bpy
 from bpy.types import Operator
 
