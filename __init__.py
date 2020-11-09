@@ -1,14 +1,15 @@
-bl_info = {"name":"Icicle Generator",
-           "author":"Eoin Brennan (Mayeoin Bread)",
-           "version":(2,5),
-           "blender":(2,80,0),
-           "location":"3D View > Tools",
-           "description":"Adds a linear string of icicles of different sizes",
-           "warning":"",
-           "wiki_url":"",
-           "tracker_url":"",
-           "category":"Development"
-           }
+bl_info = {
+    "name":"Icicle Generator",
+    "author":"Eoin Brennan (Mayeoin Bread)",
+    "version":(2,6),
+    "blender":(2,90,0),
+    "location":"3D View > Tools",
+    "description":"Add icicles of varying widths & heights to selected non-vertical edges",
+    "warning":"",
+    "wiki_url":"",
+    "tracker_url":"",
+    "category":"Add Mesh"
+    }
 
 import bpy
 
@@ -23,12 +24,18 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 # import all teh ops and stuff
-from . ig_panel import OBJECT_PT_CustomPanel
+from . ig_panel import OBJECT_PT_IciclePanel
 from . ig_gen_op import WM_OT_GenIcicle
 # from . draw_op import OT_draw_operator
 
 # Properties class to hold required parameters
-class MyProperties(PropertyGroup):
+class IcicleProperties(PropertyGroup):
+
+    def tgl_update_fnc(self, context):
+        if self.preview_btn_tgl:
+            bpy.ops.wm.icicle_preview('INVOKE_DEFAULT')
+        return
+
     max_rad: FloatProperty(
         name='Max Radius',
         description='Maximum radius of a cone',
@@ -122,9 +129,8 @@ class MyProperties(PropertyGroup):
         default='Down'
     )
 
-#classes = [MyProperties, OBJECT_PT_CustomPanel, OT_draw_operator, WM_OT_GenIcicle]
-classes = [MyProperties, OBJECT_PT_CustomPanel, WM_OT_GenIcicle]
-
+# classes = [IcicleProperties, OBJECT_PT_IciclePanel, OT_Draw_Preview, WM_OT_GenIcicle]
+classes = [IcicleProperties, OBJECT_PT_IciclePanel, WM_OT_GenIcicle]
 
 # Register/unregister classes
 def register():
@@ -132,7 +138,7 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Scene.my_props = PointerProperty(type=MyProperties)
+    bpy.types.Scene.icegen_props = PointerProperty(type=IcicleProperties)
 
 def unregister():
     from bpy.utils import unregister_class

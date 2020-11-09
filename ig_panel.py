@@ -1,8 +1,21 @@
+bl_info = {
+    "name":"Icicle Generator",
+    "author":"Eoin Brennan (Mayeoin Bread)",
+    "version":(2,6),
+    "blender":(2,90,0),
+    "location":"3D View > Tools",
+    "description":"Add icicles of varying widths & heights to selected non-vertical edges",
+    "warning":"",
+    "wiki_url":"",
+    "tracker_url":"",
+    "category":"Add Mesh"
+    }
+
 import bpy_types
 from bpy.types import Panel
 
-class OBJECT_PT_CustomPanel(Panel):
-    bl_idname = 'OBJECT_PT_custom_panel'
+class OBJECT_PT_IciclePanel(Panel):
+    bl_idname = 'OBJECT_PT_icicle_panel'
     bl_label = 'Icicle Generator'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -15,41 +28,43 @@ class OBJECT_PT_CustomPanel(Panel):
 
     def draw(self, context):
         layout = self.layout
-        scene = context.scene
-        myprop = scene.my_props
+        icicle_props = context.scene.icegen_props
 
         row = layout.row()
-        layout.prop(myprop, 'on_selected_edges')
+        layout.prop(icicle_props, 'on_selected_edges')
 
         row = layout.row()
         
         col = layout.column(align=True)
         col.label(text='Radius:')
-        col.prop(myprop, 'min_rad')
-        col.prop(myprop, 'max_rad')
+        col.prop(icicle_props, 'min_rad')
+        col.prop(icicle_props, 'max_rad')
 
         row = layout.row()
         
         col.label(text='Depth:')
-        col.prop(myprop, 'min_depth')
-        col.prop(myprop, 'max_depth')
+        col.prop(icicle_props, 'min_depth')
+        col.prop(icicle_props, 'max_depth')
 
         row = layout.row()
         
         col.label(text='Loop cuts:')
-        col.prop(myprop, 'subdivs')
+        col.prop(icicle_props, 'subdivs')
 
         col.label(text='Cap')
-        col.prop(myprop, 'num_verts')
-        col.prop(myprop, 'add_cap')
+        col.prop(icicle_props, 'num_verts')
+        col.prop(icicle_props, 'add_cap')
 
         row = layout.row()
         
-        layout.prop(myprop, 'max_its')
+        layout.prop(icicle_props, 'max_its')
 
-        layout.prop(myprop, 'reselect_base')
+        layout.prop(icicle_props, 'reselect_base')
 
-        layout.prop(myprop, 'direction')
+        layout.prop(icicle_props, 'direction')
+
+        # label = "Preview On" if icicle_props.preview_btn_tgl else "Preview Off"
+        # layout.prop(icicle_props, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
 
         row = layout.row()
         # row.operator('object.draw_op', text='Draw', icon='GPBRUSH_PEN')
