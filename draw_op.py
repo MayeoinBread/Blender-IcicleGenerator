@@ -94,14 +94,14 @@ class OT_draw_operator(Operator):
         wm = obj.matrix_world
 
         scene = bpy.context.scene
-        myprop = scene.my_props
+        ice_prop = scene.icegen_props
 
         self.min_array = []
         self.max_array = []
 
         self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
 
-        if myprop.on_selected_edges:
+        if ice_prop.on_selected_edges:
             s_edges = [e for e in bm.edges if e.select and not self.points_same_2d(e)]
         else:
             s_edges = [e for e in bm.edges if not self.points_same_2d(e)]
@@ -115,16 +115,16 @@ class OT_draw_operator(Operator):
             mid_point = (v1 + v2) * 0.5
 
             min_icicle = [
-                mid_point + (myprop.min_rad / 2) * v_dir,
-                mid_point - myprop.min_depth * Vector((0, 0, 1)),
-                mid_point - (myprop.min_rad / 2) * v_dir
+                mid_point + (ice_prop.min_rad / 2) * v_dir,
+                mid_point - ice_prop.min_depth * Vector((0, 0, 1)),
+                mid_point - (ice_prop.min_rad / 2) * v_dir
             ]
 
             max_icicle = [
-                mid_point + (myprop.max_rad / 2) * v_dir,
-                #(mid_point.x, mid_point.y, mid_point.z - myprop.max_depth),
-                mid_point - myprop.max_depth * Vector((0, 0, 1)),
-                mid_point - (myprop.max_rad / 2) * v_dir
+                mid_point + (ice_prop.max_rad / 2) * v_dir,
+                #(mid_point.x, mid_point.y, mid_point.z - ice_prop.max_depth),
+                mid_point - ice_prop.max_depth * Vector((0, 0, 1)),
+                mid_point - (ice_prop.max_rad / 2) * v_dir
             ]
 
             self.min_array.append(batch_for_shader(self.shader, 'LINE_STRIP', {'pos':min_icicle}))
