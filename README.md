@@ -26,3 +26,5 @@ Some improvements over 2.7x version.
 ## Upcoming Features
 * Replace existing icicles when regenerating without need to manually delete old iterations
 * Helpers in 3D view to show min/max parameters
+* Update measurement limits, kink factors etc.
+* Account for object scaling
