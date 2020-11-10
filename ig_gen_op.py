@@ -19,6 +19,16 @@ from mathutils import Vector
 from math import pi
 import random
 
+def vertical_difference_check(edge):
+    # TODO update buffer at some point
+    return abs(edge.verts[0].co.z - edge.verts[1].co.z) > 0.01
+
+
+# Get z co-ordinate, used for sorting
+def get_vertex_z(vert):
+    return vert.co.z
+
+
 class WM_OT_GenIcicle(Operator):
     bl_idname = 'wm.gen_icicle'
     bl_label = 'Generate Icicles'
@@ -45,10 +55,6 @@ class WM_OT_GenIcicle(Operator):
             location = loc,
             rotation = rot
             )
-
-    # Get z co-ordinate, used for sorting
-    def get_z(self, vert):
-        return vert.co.z
 
     ##
     # Add icicle function
@@ -95,7 +101,12 @@ class WM_OT_GenIcicle(Operator):
         # Set up vars for the loop
         it_rad = rand_rad
         it_depth = rand_depth
-        num_cuts = random.randint(0, ice_prop.subdivs)
+        wh_ratio = it_depth / it_rad
+        if wh_ratio < 1:
+            max_cuts = min(1, ice_prop.subdivs)
+        else:
+            max_cuts = ice_prop.subdivs
+        num_cuts = random.randint(1, max_cuts)
 
         # List to hold calculated points to add cones
         edge_points = []
@@ -105,23 +116,28 @@ class WM_OT_GenIcicle(Operator):
             # Check that 2 * min_rad can fit inside the remaining space
             if (total_length - c_length) < (2 * ice_prop.min_rad):
                 break
-            # Check depth is bigger then radius
-            # Icicles generally longer than wider
-            if it_depth > it_rad:
-                # Check that we won't overshoot the length of the line
-                # By using a cone of this radius
-                if c_length + (2 * it_rad) <= total_length:
-                    c_length += it_rad
-                    t_co = pos2 + (c_length / total_length) * (pos1 - pos2)
-                    c_length += it_rad
-                    # Set up a random variable to offset the subdivisions on the icicle if added
-                    t_rand = min(it_rad * 0.45, it_rad) * self.pos_neg()
-                    edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
+            # # Check depth is bigger then radius
+            # # Icicles generally longer than wider
+            # if it_depth > it_rad:
+            # Check that we won't overshoot the length of the line
+            # By using a cone of this radius
+            if c_length + (2 * it_rad) <= total_length:
+                c_length += it_rad
+                t_co = pos2 + (c_length / total_length) * (pos1 - pos2)
+                c_length += it_rad
+                # Set up a random variable to offset the subdivisions on the icicle if added
+                t_rand = min(it_rad * 0.45, it_rad) * self.pos_neg()
+                edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
 
             # Re-calculate values for next iteration
             it_rad = min(ice_prop.min_rad + (rad_dif * random.random()), ice_prop.max_rad)
             it_depth = min(ice_prop.min_depth + (depth_dif * random.random()), ice_prop.max_depth)
-            num_cuts = random.randint(0, ice_prop.subdivs)
+            wh_ratio = it_depth / it_rad
+            if wh_ratio < 1:
+                max_cuts = min(1, ice_prop.subdivs)
+            else:
+                max_cuts = ice_prop.subdivs
+            num_cuts = random.randint(1, max_cuts)
 
             # Increment by 1, check for max reached
             c += 1
@@ -134,15 +150,15 @@ class WM_OT_GenIcicle(Operator):
             # Add the cone
             self.add_cone(ice_prop.num_verts, cpoint, rad, depth, ice_prop.add_cap, ice_prop.direction)
             # Check that we're going to subdivide, and that we're going to shift them a noticable amount
-            if cuts > 0 and abs(offset) > 0.02:
+            if cuts > 0:  # and abs(offset) > 0.02:
                 bm.edges.ensure_lookup_table()
                 # Get the vertical edges only so we can subdivide
-                vertical_edges = [e for e in bm.edges if e.select and e.verts[0].co.z != e.verts[1].co.z]
+                vertical_edges = [e for e in bm.edges if e.select and vertical_difference_check(e)]
                 ret = bmesh.ops.subdivide_edges(bm, edges=vertical_edges, cuts=cuts)
                 # Get the newly-generated verts so we can shift them
                 new_verts = [v for v in ret['geom_split'] if type(v) is bmesh.types.BMVert]
                 # Sort so we work from top down
-                new_verts.sort(key=self.get_z, reverse=True)
+                new_verts.sort(key=get_vertex_z, reverse=True)
                 for t in range(cuts):
                     v_z = new_verts[0].co.z
                     bpy.ops.mesh.select_all(action='DESELECT')
@@ -150,7 +166,8 @@ class WM_OT_GenIcicle(Operator):
                     for v in (v for v in new_verts if -0.04 < v.co.z - v_z < 0.04):
                         v.select = True
                     # Move the edge loop
-                    bpy.ops.transform.translate(value=(offset, offset, offset))
+                    # TODO vertical offset based off (depth / num_cuts)
+                    bpy.ops.transform.translate(value=(offset, offset, 0))
                     # Generate new offset value, and (try) make it less effective as we go down the icicle
                     offset = offset * random.random() * abs((1-t)/cuts)
                 obj.data.update()
@@ -163,12 +180,19 @@ class WM_OT_GenIcicle(Operator):
         bm = bmesh.from_edit_mesh(obj.data)
         bm.edges.ensure_lookup_table()
         ice_props = context.scene.icicle_properties
+
+        # Make sure we're in Edge select mode
+        bpy.ops.mesh.select_mode(type='EDGE')
         
         # List of initial edges
         if ice_props.on_selected_edges:
             original_edges = [e for e in bm.edges if e.select]
         else:
             original_edges = [e for e in bm.edges]
+
+        if ice_props.delete_previous:
+            bpy.ops.mesh.select_all(action='INVERT')
+            bpy.ops.mesh.delete(type='EDGE')
     
         for idx, m_edge in enumerate(original_edges):
             # Check for vertical edge before working on it
