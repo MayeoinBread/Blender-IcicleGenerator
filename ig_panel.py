@@ -28,7 +28,7 @@ class OBJECT_PT_IciclePanel(Panel):
 
     def draw(self, context):
         layout = self.layout
-        icicle_props = context.scene.icegen_props
+        icicle_props = context.scene.icicle_properties
 
         row = layout.row()
         layout.prop(icicle_props, 'on_selected_edges')

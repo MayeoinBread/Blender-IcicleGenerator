@@ -138,11 +138,11 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Scene.icegen_props = PointerProperty(type=IcicleProperties)
+    bpy.types.Scene.icicle_properties = PointerProperty(type=IcicleProperties)
 
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
 
-    del bpy.types.Scene.my_props
+    del bpy.types.Scene.icicle_properties
