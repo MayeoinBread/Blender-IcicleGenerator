@@ -26,7 +26,6 @@ import mathutils
 
 from . ig_gen_op import check_same_2d
 
-# class OT_draw_operator(Operator):
 class OT_Draw_Preview(Operator):
     bl_idname = "wm.icicle_preview"
     bl_label = "Icicle preview"
@@ -42,7 +41,7 @@ class OT_Draw_Preview(Operator):
         self.draw_handle_3d = None
         self.draw_event  = None
 
-        self.ice_props = bpy.context.scene.icegen_props
+        self.ice_props = bpy.context.scene.icicle_properties
         self.vert_array = []
 
         self.create_batch()
@@ -61,7 +60,7 @@ class OT_Draw_Preview(Operator):
             self.draw_callback_3d, args, "WINDOW", "POST_VIEW"
         )
 
-        self.draw_event = context.window_manager.event_timer_add(0.1, window=context.window)
+        self.draw_event = context.window_manager.event_timer_add(0.5, window=context.window)
 
     def unregister_handlers(self, context):
         context.window_manager.event_timer_remove(self.draw_event)
@@ -93,15 +92,10 @@ class OT_Draw_Preview(Operator):
         bm = bmesh.from_edit_mesh(obj.data)
         wm = obj.matrix_world
 
-        # Get edges based on selection criteria
-        if self.ice_props.on_selected_edges:
-            s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, self.ice_props.min_rad)]
-        self.min_array = []
-        self.max_array = []
-
         self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-        else:
-            s_edges = [e for e in bm.edges if not check_same_2d(e, self.ice_props.min_rad)]
+
+        # Get edges based on selection criteria
+        s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, self.ice_props.min_rad)]
 
         # Find midpoint of each edge to position preview of icicles
         for e in s_edges:
@@ -120,8 +114,15 @@ class OT_Draw_Preview(Operator):
         # Get direction
         m_dir = -1 if self.ice_props.direction == 'Up' else 1
 
+        ra_rads = 90 * (math.pi / 180)
+
         for mid_point, v_dir in self.vert_array:
-            v_r_dir = mathutils.Vector((v_dir.y, v_dir.x, v_dir.z))
+            v_r_dir = mathutils.Vector((
+                v_dir.x * math.cos(ra_rads) - v_dir.y * math.sin(ra_rads),
+                v_dir.x * math.sin(ra_rads) + v_dir.y * math.cos(ra_rads),
+                v_dir.z
+            ))
+            
             shader.uniform_float('color', (0, 1, 1, 1))
             # min size icicle
             min_icicle = [
@@ -137,7 +138,6 @@ class OT_Draw_Preview(Operator):
             sq_1 = [min_icicle[0], min_icicle_r[0], min_icicle[2], min_icicle_r[2], min_icicle[0]]
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle})
             batch.draw(shader)
-            # min_icicle_t = [x.transposed() for x in min_icicle]
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle_r})
             batch.draw(shader)
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":sq_1})

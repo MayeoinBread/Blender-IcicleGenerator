@@ -102,12 +102,6 @@ class IcicleProperties(PropertyGroup):
         default=True
     )
 
-    on_selected_edges: BoolProperty(
-        name='Only add to selected edges',
-        description='Add icicles to selected edges only. Otherwise, applied to all edges in mesh',
-        default=True
-    )
-
     add_cap: EnumProperty(
         name='Fill',
         description='Fill the icicle cone base',
@@ -136,8 +130,7 @@ class IcicleProperties(PropertyGroup):
         description='Toggle preview of max/min dimensions in 3D view'
     )
 
-classes = [MyProperties, OBJECT_PT_CustomPanel, OT_Draw_Preview, WM_OT_GenIcicle]
-# classes = [MyProperties, OBJECT_PT_CustomPanel, WM_OT_GenIcicle]
+classes = [IcicleProperties, OBJECT_PT_IciclePanel, OT_Draw_Preview, WM_OT_GenIcicle]
 
 # Register/unregister classes
 def register():
