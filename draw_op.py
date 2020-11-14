@@ -8,7 +8,8 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 from bpy.types import Operator
-from mathutils import Vector
+import math
+import mathutils
 
 from . ig_gen_op import check_same_2d
 
@@ -103,23 +104,45 @@ class OT_Draw_Preview(Operator):
         m_dir = -1 if self.ice_props.direction == 'Up' else 1
 
         for mid_point, v_dir in self.vert_array:
+            v_r_dir = mathutils.Vector((v_dir.y, v_dir.x, v_dir.z))
             shader.uniform_float('color', (0, 1, 1, 1))
             # min size icicle
             min_icicle = [
                 mid_point + (self.ice_props.min_rad * v_dir),
-                mid_point - (m_dir * self.ice_props.min_depth * Vector((0, 0, 1))),
+                mid_point - (m_dir * self.ice_props.min_depth * mathutils.Vector((0, 0, 1))),
                 mid_point - (self.ice_props.min_rad * v_dir)
             ]
+            min_icicle_r = [
+                mid_point + (self.ice_props.min_rad * v_r_dir),
+                mid_point - (m_dir * self.ice_props.min_depth * mathutils.Vector((0, 0, 1))),
+                mid_point - (self.ice_props.min_rad * v_r_dir)
+            ]
+            sq_1 = [min_icicle[0], min_icicle_r[0], min_icicle[2], min_icicle_r[2], min_icicle[0]]
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle})
+            batch.draw(shader)
+            # min_icicle_t = [x.transposed() for x in min_icicle]
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":min_icicle_r})
+            batch.draw(shader)
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":sq_1})
             batch.draw(shader)
 
             shader.uniform_float('color', (0, 0, 1, 1))
             # max size icicle
             max_icicle = [
                 mid_point + (self.ice_props.max_rad * v_dir),
-                mid_point - (m_dir * self.ice_props.max_depth * Vector((0, 0, 1))),
+                mid_point - (m_dir * self.ice_props.max_depth * mathutils.Vector((0, 0, 1))),
                 mid_point - (self.ice_props.max_rad * v_dir)
             ]
+            max_icicle_r = [
+                mid_point + (self.ice_props.max_rad * v_r_dir),
+                mid_point - (m_dir * self.ice_props.max_depth * mathutils.Vector((0, 0, 1))),
+                mid_point - (self.ice_props.max_rad * v_r_dir)
+            ]
+            sq_2 = [max_icicle[0], max_icicle_r[0], max_icicle[2], max_icicle_r[2], max_icicle[0]]
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":max_icicle})
+            batch.draw(shader)
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":max_icicle_r})
+            batch.draw(shader)
+            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":sq_2})
             batch.draw(shader)
 
