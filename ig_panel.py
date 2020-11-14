@@ -31,10 +31,6 @@ class OBJECT_PT_IciclePanel(Panel):
         icicle_props = context.scene.icicle_properties
 
         row = layout.row()
-        layout.prop(icicle_props, 'on_selected_edges')
-
-        row = layout.row()
-        
         col = layout.column(align=True)
         col.label(text='Radius:')
         col.prop(icicle_props, 'min_rad')
@@ -65,9 +61,8 @@ class OBJECT_PT_IciclePanel(Panel):
 
         layout.prop(icicle_props, 'direction')
 
-        # label = "Preview On" if icicle_props.preview_btn_tgl else "Preview Off"
-        # layout.prop(icicle_props, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
+        label = "Preview On" if icicle_props.preview_btn_tgl else "Preview Off"
+        layout.prop(icicle_props, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
 
         row = layout.row()
-        # row.operator('object.draw_op', text='Draw', icon='GPBRUSH_PEN')
         row.operator('wm.gen_icicle', text='Generate', icon='PHYSICS')

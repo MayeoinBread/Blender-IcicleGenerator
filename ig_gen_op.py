@@ -19,6 +19,7 @@ from mathutils import Vector
 from math import pi
 import random
 
+
 def vertical_difference_check(edge):
     # TODO update buffer at some point
     return abs(edge.verts[0].co.z - edge.verts[1].co.z) > 0.01
@@ -27,6 +28,18 @@ def vertical_difference_check(edge):
 # Get z co-ordinate, used for sorting
 def get_vertex_z(vert):
     return vert.co.z
+
+  
+def check_same_2d(m_edge, min_rad):
+    # Return True if verts are too close together
+    e1_2d = Vector(((m_edge.verts[0].co.x, m_edge.verts[0].co.y)))
+    e2_2d = Vector(((m_edge.verts[1].co.x, m_edge.verts[1].co.y)))
+    d_2d = (e1_2d - e2_2d).length
+    
+    # Check that edge is long enough to fit the smallest cone
+    if d_2d <= 2 * min_rad:
+        return True
+    return False
 
 
 class WM_OT_GenIcicle(Operator):
@@ -40,15 +53,15 @@ class WM_OT_GenIcicle(Operator):
     ##
     # Add cone function
     ##
-    def add_cone(self, num_verts, loc_vector, base_rad, cone_depth, cone_cap, direction):
-        rot = (0.0 if direction == 'Up' else pi, 0.0, 0.0)
-        loc = loc_vector + (cone_depth / 2) * Vector((0, 0, 1)) if direction == 'Up' else loc_vector - (cone_depth / 2) * Vector((0, 0, 1))
+    def add_cone(self, loc_vector, base_rad, cone_depth):
+        rot = (0.0 if self.ice_prop.direction == 'Up' else pi, 0.0, 0.0)
+        loc = loc_vector + (cone_depth / 2) * Vector((0, 0, 1)) if self.ice_prop.direction == 'Up' else loc_vector - (cone_depth / 2) * Vector((0, 0, 1))
         bpy.ops.mesh.primitive_cone_add(
-            vertices = num_verts,
+            vertices = self.ice_prop.num_verts,
             radius1 = base_rad,
             radius2 = 0.0,
             depth = cone_depth,
-            end_fill_type = cone_cap,
+            end_fill_type = self.ice_prop.add_cap,
             align = 'WORLD',
             # Adjust the Z-height to account for the depth of the cone
             # As pivot point is in the centre of the mesh
@@ -63,7 +76,7 @@ class WM_OT_GenIcicle(Operator):
         obj = context.object
         bm = bmesh.from_edit_mesh(obj.data)
         world_matrix = obj.matrix_world
-        ice_prop = context.scene.icicle_properties
+        self.ice_prop = context.scene.icicle_properties
         
         # Get the verts by checking the selected edge
         edge_verts = [v for v in bm.verts if v.select]
@@ -86,15 +99,15 @@ class WM_OT_GenIcicle(Operator):
         # current length
         c_length = 0.0
         # Randomise the difference between radii, add it to the min and don't go over the max value
-        rad_dif = ice_prop.max_rad - ice_prop.min_rad
-        rand_rad = min(ice_prop.min_rad + (rad_dif * random.random()), ice_prop.max_rad)
+        rad_dif = self.ice_prop.max_rad - self.ice_prop.min_rad
+        rand_rad = min(self.ice_prop.min_rad + (rad_dif * random.random()), self.ice_prop.max_rad)
         
         # Depth, as with radius above
-        depth_dif = ice_prop.max_depth - ice_prop.min_depth
-        rand_depth = min(ice_prop.min_depth + (depth_dif * random.random()), ice_prop.max_depth)
+        depth_dif = self.ice_prop.max_depth - self.ice_prop.min_depth
+        rand_depth = min(self.ice_prop.min_depth + (depth_dif * random.random()), self.ice_prop.max_depth)
 
         # Get user iterations Max
-        iterations = ice_prop.max_its
+        iterations = self.ice_prop.max_its
         # Counter for iterations
         c = 0
 
@@ -103,7 +116,7 @@ class WM_OT_GenIcicle(Operator):
         it_depth = rand_depth
         wh_ratio = it_depth / it_rad
         if wh_ratio < 1:
-            max_cuts = min(1, ice_prop.subdivs)
+            max_cuts = min(1, self.ice_prop.subdivs)
         else:
             max_cuts = ice_prop.subdivs
         num_cuts = random.randint(1, max_cuts)
@@ -114,7 +127,7 @@ class WM_OT_GenIcicle(Operator):
         c = 0
         while c_length < total_length and c < iterations:
             # Check that 2 * min_rad can fit inside the remaining space
-            if (total_length - c_length) < (2 * ice_prop.min_rad):
+            if (total_length - c_length) < (2 * self.ice_prop.min_rad):
                 break
             # # Check depth is bigger then radius
             # # Icicles generally longer than wider
@@ -130,13 +143,13 @@ class WM_OT_GenIcicle(Operator):
                 edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
 
             # Re-calculate values for next iteration
-            it_rad = min(ice_prop.min_rad + (rad_dif * random.random()), ice_prop.max_rad)
-            it_depth = min(ice_prop.min_depth + (depth_dif * random.random()), ice_prop.max_depth)
+            it_rad = min(self.ice_prop.min_rad + (rad_dif * random.random()), self.ice_prop.max_rad)
+            it_depth = min(self.ice_prop.min_depth + (depth_dif * random.random()), self.ice_prop.max_depth)
             wh_ratio = it_depth / it_rad
             if wh_ratio < 1:
-                max_cuts = min(1, ice_prop.subdivs)
+                max_cuts = min(1, self.ice_prop.subdivs)
             else:
-                max_cuts = ice_prop.subdivs
+                max_cuts = self.ice_prop.subdivs
             num_cuts = random.randint(1, max_cuts)
 
             # Increment by 1, check for max reached
@@ -148,7 +161,7 @@ class WM_OT_GenIcicle(Operator):
         # Then subdivide and shift to alter the straightness
         for cpoint, rad, depth, cuts, offset in edge_points:
             # Add the cone
-            self.add_cone(ice_prop.num_verts, cpoint, rad, depth, ice_prop.add_cap, ice_prop.direction)
+            self.add_cone(cpoint, rad, depth)
             # Check that we're going to subdivide, and that we're going to shift them a noticable amount
             if cuts > 0:  # and abs(offset) > 0.02:
                 bm.edges.ensure_lookup_table()
@@ -185,11 +198,7 @@ class WM_OT_GenIcicle(Operator):
         bpy.ops.mesh.select_mode(type='EDGE')
         
         # List of initial edges
-        if ice_props.on_selected_edges:
-            original_edges = [e for e in bm.edges if e.select]
-        else:
-            original_edges = [e for e in bm.edges]
-
+        original_edges = [e for e in bm.edges if e.select]
         if ice_props.delete_previous:
             bpy.ops.mesh.select_all(action='INVERT')
             bpy.ops.mesh.delete(type='EDGE')
