@@ -19,10 +19,30 @@ from mathutils import Vector
 from math import pi
 import random
 
+
+def check_same_2d(m_edge, min_rad):
+    # Return True if verts are too close together
+    e1_2d = Vector(((m_edge.verts[0].co.x, m_edge.verts[0].co.y)))
+    e2_2d = Vector(((m_edge.verts[1].co.x, m_edge.verts[1].co.y)))
+    d_2d = (e1_2d - e2_2d).length
+    
+    # Check that edge is long enough to fit the smallest cone
+    if d_2d <= 2 * min_rad:
+        return True
+    return False
+
+
 class WM_OT_GenIcicle(Operator):
     bl_idname = 'wm.gen_icicle'
     bl_label = 'Generate Icicles'
     bl_options = {'REGISTER', 'UNDO'}
+
+    def __init__(self):
+        self.scene = bpy.context.scene
+        self.obj = bpy.context.active_object
+        self.bm = bmesh.from_edit_mesh(self.obj.data)
+        self.world_matrix = self.obj.matrix_world
+        self.ice_props = self.scene.icegen_props
 
     def pos_neg(self):
         return -1 if random.random() < 0.5 else 1
@@ -30,15 +50,15 @@ class WM_OT_GenIcicle(Operator):
     ##
     # Add cone function
     ##
-    def add_cone(self, num_verts, loc_vector, base_rad, cone_depth, cone_cap, direction):
-        rot = (0.0 if direction == 'Up' else pi, 0.0, 0.0)
-        loc = loc_vector + (cone_depth / 2) * Vector((0, 0, 1)) if direction == 'Up' else loc_vector - (cone_depth / 2) * Vector((0, 0, 1))
+    def add_cone(self, loc_vector, base_rad, cone_depth):
+        rot = (0.0 if self.ice_props.direction == 'Up' else pi, 0.0, 0.0)
+        loc = loc_vector + (cone_depth / 2) * Vector((0, 0, 1)) if self.ice_props.direction == 'Up' else loc_vector - (cone_depth / 2) * Vector((0, 0, 1))
         bpy.ops.mesh.primitive_cone_add(
-            vertices = num_verts,
+            vertices = self.ice_props.num_verts,
             radius1 = base_rad,
             radius2 = 0.0,
             depth = cone_depth,
-            end_fill_type = cone_cap,
+            end_fill_type = self.ice_props.add_cap,
             align = 'WORLD',
             # Adjust the Z-height to account for the depth of the cone
             # As pivot point is in the centre of the mesh
@@ -53,14 +73,9 @@ class WM_OT_GenIcicle(Operator):
     ##
     # Add icicle function
     ##
-    def add_icicles(self, context):
-        obj = context.object
-        bm = bmesh.from_edit_mesh(obj.data)
-        world_matrix = obj.matrix_world
-        ice_prop = context.scene.icicle_properties
-        
+    def add_icicles(self):
         # Get the verts by checking the selected edge
-        edge_verts = [v for v in bm.verts if v.select]
+        edge_verts = [v for v in self.bm.verts if v.select]
         # Make sure we only have 2 verts to use
         if len(edge_verts) != 2:
             print('Incorrect number of verts selected. Expected 2, found {}'.format(len(edge_verts)))
@@ -71,8 +86,8 @@ class WM_OT_GenIcicle(Operator):
         v2 = edge_verts[1].co
 
         # World matrix for positioning
-        pos1 = world_matrix @ v1
-        pos2 = world_matrix @ v2
+        pos1 = self.world_matrix @ v1
+        pos2 = self.world_matrix @ v2
 
         # Total length of current edge
         total_length = (pos1 - pos2).length
@@ -80,22 +95,22 @@ class WM_OT_GenIcicle(Operator):
         # current length
         c_length = 0.0
         # Randomise the difference between radii, add it to the min and don't go over the max value
-        rad_dif = ice_prop.max_rad - ice_prop.min_rad
-        rand_rad = min(ice_prop.min_rad + (rad_dif * random.random()), ice_prop.max_rad)
+        rad_dif = self.ice_props.max_rad - self.ice_props.min_rad
+        rand_rad = min(self.ice_props.min_rad + (rad_dif * random.random()), self.ice_props.max_rad)
         
         # Depth, as with radius above
-        depth_dif = ice_prop.max_depth - ice_prop.min_depth
-        rand_depth = min(ice_prop.min_depth + (depth_dif * random.random()), ice_prop.max_depth)
+        depth_dif = self.ice_props.max_depth - self.ice_props.min_depth
+        rand_depth = min(self.ice_props.min_depth + (depth_dif * random.random()), self.ice_props.max_depth)
 
         # Get user iterations Max
-        iterations = ice_prop.max_its
+        iterations = self.ice_props.max_its
         # Counter for iterations
         c = 0
 
         # Set up vars for the loop
         it_rad = rand_rad
         it_depth = rand_depth
-        num_cuts = random.randint(0, ice_prop.subdivs)
+        num_cuts = random.randint(0, self.ice_props.subdivs)
 
         # List to hold calculated points to add cones
         edge_points = []
@@ -103,7 +118,7 @@ class WM_OT_GenIcicle(Operator):
         c = 0
         while c_length < total_length and c < iterations:
             # Check that 2 * min_rad can fit inside the remaining space
-            if (total_length - c_length) < (2 * ice_prop.min_rad):
+            if (total_length - c_length) < (2 * self.ice_props.min_rad):
                 break
             # Check depth is bigger then radius
             # Icicles generally longer than wider
@@ -119,9 +134,9 @@ class WM_OT_GenIcicle(Operator):
                     edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
 
             # Re-calculate values for next iteration
-            it_rad = min(ice_prop.min_rad + (rad_dif * random.random()), ice_prop.max_rad)
-            it_depth = min(ice_prop.min_depth + (depth_dif * random.random()), ice_prop.max_depth)
-            num_cuts = random.randint(0, ice_prop.subdivs)
+            it_rad = min(self.ice_props.min_rad + (rad_dif * random.random()), self.ice_props.max_rad)
+            it_depth = min(self.ice_props.min_depth + (depth_dif * random.random()), self.ice_props.max_depth)
+            num_cuts = random.randint(0, self.ice_props.subdivs)
 
             # Increment by 1, check for max reached
             c += 1
@@ -132,13 +147,13 @@ class WM_OT_GenIcicle(Operator):
         # Then subdivide and shift to alter the straightness
         for cpoint, rad, depth, cuts, offset in edge_points:
             # Add the cone
-            self.add_cone(ice_prop.num_verts, cpoint, rad, depth, ice_prop.add_cap, ice_prop.direction)
+            self.add_cone(cpoint, rad, depth)
             # Check that we're going to subdivide, and that we're going to shift them a noticable amount
             if cuts > 0 and abs(offset) > 0.02:
-                bm.edges.ensure_lookup_table()
+                self.bm.edges.ensure_lookup_table()
                 # Get the vertical edges only so we can subdivide
-                vertical_edges = [e for e in bm.edges if e.select and e.verts[0].co.z != e.verts[1].co.z]
-                ret = bmesh.ops.subdivide_edges(bm, edges=vertical_edges, cuts=cuts)
+                vertical_edges = [e for e in self.bm.edges if e.select and e.verts[0].co.z != e.verts[1].co.z]
+                ret = bmesh.ops.subdivide_edges(self.bm, edges=vertical_edges, cuts=cuts)
                 # Get the newly-generated verts so we can shift them
                 new_verts = [v for v in ret['geom_split'] if type(v) is bmesh.types.BMVert]
                 # Sort so we work from top down
@@ -153,71 +168,65 @@ class WM_OT_GenIcicle(Operator):
                     bpy.ops.transform.translate(value=(offset, offset, offset))
                     # Generate new offset value, and (try) make it less effective as we go down the icicle
                     offset = offset * random.random() * abs((1-t)/cuts)
-                obj.data.update()
+                self.obj.data.update()
 
     ##
     # Run function
     ##        
-    def runIt(self, context):
-        obj = context.object
-        bm = bmesh.from_edit_mesh(obj.data)
-        bm.edges.ensure_lookup_table()
-        ice_props = context.scene.icicle_properties
-        
+    def runIt(self):
         # List of initial edges
-        if ice_props.on_selected_edges:
-            original_edges = [e for e in bm.edges if e.select]
+        if self.ice_props.on_selected_edges:
+            original_edges = [e for e in self.bm.edges if e.select]
         else:
-            original_edges = [e for e in bm.edges]
+            original_edges = [e for e in self.bm.edges]
     
         for idx, m_edge in enumerate(original_edges):
             # Check for vertical edge before working on it
-            e1_2d = Vector((m_edge.verts[0].co.x, m_edge.verts[0].co.y))
-            e2_2d = Vector((m_edge.verts[1].co.x, m_edge.verts[1].co.y))
-            d_2d = (e1_2d - e2_2d).length
-            
-            # Check that edge is long enough to fit the smallest cone
-            if d_2d <= 2 * ice_props.min_rad:
+            if check_same_2d(m_edge, self.ice_props.min_rad):
                 # print("{} - Edge too small".format(idx))
+                if abs(m_edge.verts[0].co.z - m_edge.verts[1].co.z) > self.ice_props.min_depth:
+                    self.vertical_edges = True
+                else:
+                    self.short_edge = True
                 continue
 
             # Deselect everything and select the current edge
             bpy.ops.mesh.select_all(action='DESELECT')
-            bm.edges.ensure_lookup_table()
+            self.bm.edges.ensure_lookup_table()
             m_edge.select = True
-            self.add_icicles(context)
+            self.add_icicles()
         
         # Reselect the initial selection if desired
-        if ice_props.reselect_base:
+        if self.ice_props.reselect_base:
             bpy.ops.mesh.select_all(action='DESELECT')
-            bm.edges.ensure_lookup_table()
+            self.bm.edges.ensure_lookup_table()
             for e in original_edges:
                 e.select = True
 
     def execute(self, context):
-        scene = bpy.context.scene
-        ice_prop = scene.icicle_properties
-
         # Check variables aren't bigger than they should be
-        if ice_prop.min_rad > ice_prop.max_rad:
-            ice_prop.max_rad = ice_prop.min_rad
+        if self.ice_props.min_rad > self.ice_props.max_rad:
+            self.ice_props.max_rad = self.ice_props.min_rad
         
-        if ice_prop.min_depth > ice_prop.max_depth:
-            ice_prop.max_depth = ice_prop.min_depth
+        if self.ice_props.min_depth > self.ice_props.max_depth:
+            self.ice_props.max_depth = self.ice_props.min_depth
         
-        self.verticalEdges = False
+        self.vertical_edges = False
+        self.short_edge = False
 
         # Run the function
-        obj = context.active_object
+        self.obj = context.active_object
         
-        if obj and obj.type == 'MESH':
-            if obj.mode != 'EDIT':
+        if self.obj and self.obj.type == 'MESH':
+            if self.obj.mode != 'EDIT':
                 self.report({'INFO'}, "Icicles cannot be added outside Edit mode")
             else:
-                self.runIt(context)
+                self.runIt()
                 
-                if self.verticalEdges:
+                if self.vertical_edges:
                     self.report({'INFO'}, "Some edges were skipped during icicle creation - line too steep")
+                if self.short_edge:
+                    self.report({'INFO'}, "Some edges were skipped during icicle creation - edge too short")
         else:
             self.report({'INFO'}, "Cannot generate on non-Mesh object")
         

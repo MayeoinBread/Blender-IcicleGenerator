@@ -66,6 +66,9 @@ class OBJECT_PT_IciclePanel(Panel):
         # label = "Preview On" if icicle_props.preview_btn_tgl else "Preview Off"
         # layout.prop(icicle_props, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
 
+        label = "Preview On" if myprop.preview_btn_tgl else "Preview Off"
+        layout.prop(myprop, 'preview_btn_tgl', text=label, toggle=True, icon='GPBRUSH_PEN')
+
         row = layout.row()
-        # row.operator('object.draw_op', text='Draw', icon='GPBRUSH_PEN')
+        # row.operator('object.draw_op', text='Preview', icon='GPBRUSH_PEN')
         row.operator('wm.gen_icicle', text='Generate', icon='PHYSICS')
