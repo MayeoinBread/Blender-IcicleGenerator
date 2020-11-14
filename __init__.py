@@ -1,14 +1,15 @@
-bl_info = {"name":"Icicle Generator",
-           "author":"Eoin Brennan (Mayeoin Bread)",
-           "version":(2,5),
-           "blender":(2,80,0),
-           "location":"3D View > Tools",
-           "description":"Adds a linear string of icicles of different sizes",
-           "warning":"",
-           "wiki_url":"",
-           "tracker_url":"",
-           "category":"Development"
-           }
+bl_info = {
+    "name":"Icicle Generator",
+    "author":"Eoin Brennan (Mayeoin Bread)",
+    "version":(2,6),
+    "blender":(2,90,0),
+    "location":"3D View > Tools",
+    "description":"Add icicles of varying widths & heights to selected non-vertical edges",
+    "warning":"",
+    "wiki_url":"",
+    "tracker_url":"",
+    "category":"Add Mesh"
+    }
 
 import bpy
 
@@ -23,12 +24,12 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 # import all teh ops and stuff
-from . ig_panel import OBJECT_PT_CustomPanel
+from . ig_panel import OBJECT_PT_IciclePanel
 from . ig_gen_op import WM_OT_GenIcicle
 from . draw_op import OT_Draw_Preview
 
 # Properties class to hold required parameters
-class MyProperties(PropertyGroup):
+class IcicleProperties(PropertyGroup):
 
     def tgl_update_fnc(self, context):
         if self.preview_btn_tgl:
@@ -143,12 +144,10 @@ def register():
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
-
-    bpy.types.Scene.icegen_props = PointerProperty(type=MyProperties)
+    bpy.types.Scene.icicle_properties = PointerProperty(type=IcicleProperties)
 
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
-
-    del bpy.types.Scene.icegen_props
+    del bpy.types.Scene.icicle_properties

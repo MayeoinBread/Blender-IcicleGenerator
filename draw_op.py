@@ -1,3 +1,16 @@
+bl_info = {
+    "name":"Icicle Generator",
+    "author":"Eoin Brennan (Mayeoin Bread)",
+    "version":(2,6),
+    "blender":(2,90,0),
+    "location":"3D View > Tools",
+    "description":"Add icicles of varying widths & heights to selected non-vertical edges",
+    "warning":"",
+    "wiki_url":"",
+    "tracker_url":"",
+    "category":"Add Mesh"
+    }
+
 import bpy
 import bmesh
 
@@ -83,6 +96,10 @@ class OT_Draw_Preview(Operator):
         # Get edges based on selection criteria
         if self.ice_props.on_selected_edges:
             s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, self.ice_props.min_rad)]
+        self.min_array = []
+        self.max_array = []
+
+        self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         else:
             s_edges = [e for e in bm.edges if not check_same_2d(e, self.ice_props.min_rad)]
 
@@ -145,4 +162,3 @@ class OT_Draw_Preview(Operator):
             batch.draw(shader)
             batch = batch_for_shader(shader, 'LINE_STRIP', {"pos":sq_2})
             batch.draw(shader)
-
