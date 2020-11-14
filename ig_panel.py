@@ -57,6 +57,8 @@ class OBJECT_PT_IciclePanel(Panel):
 
         layout.prop(icicle_props, 'reselect_base')
 
+        layout.prop(icicle_props, 'delete_previous')
+
         layout.prop(icicle_props, 'direction')
 
         label = "Preview On" if icicle_props.preview_btn_tgl else "Preview Off"

@@ -40,8 +40,8 @@ class IcicleProperties(PropertyGroup):
         name='Max Radius',
         description='Maximum radius of a cone',
         default=0.15,
-        min=0.01,
-        max=1.0,
+        min=0.001,
+        max=10.0,
         unit='LENGTH'
     )
 
@@ -49,8 +49,8 @@ class IcicleProperties(PropertyGroup):
         name='Min Radius',
         description='Minimum radius of a cone',
         default=0.025,
-        min=0.01,
-        max=1.0,
+        min=0.001,
+        max=10.0,
         unit='LENGTH'
     )
 
@@ -59,7 +59,7 @@ class IcicleProperties(PropertyGroup):
         description='Maximum depth (height) of a cone',
         default=2.0,
         min=0.0,
-        max=2.0,
+        max=100.0,
         unit='LENGTH'
     )
 
@@ -68,7 +68,7 @@ class IcicleProperties(PropertyGroup):
         description='Minimum depth (height) of a cone',
         default=1.5,
         min=0.0,
-        max=2.0,
+        max=100.0,
         unit='LENGTH'
     )
 
@@ -90,10 +90,10 @@ class IcicleProperties(PropertyGroup):
 
     max_its: IntProperty(
         name='Iterations',
-        description='Number of iterations before giving up, prevents freezing/crashing',
+        description='Number of iterations before giving up, prevents freezing/crashing. Larger numbers take longer to generate icicles.',
         default=50,
         min=1,
-        max=100
+        max=5000
     )
 
     reselect_base: BoolProperty(
@@ -102,6 +102,12 @@ class IcicleProperties(PropertyGroup):
         default=True
     )
 
+    delete_previous: BoolProperty(
+        name='Delete previous generations',
+        description='Deletes everything except the currently selected base mesh',
+        default=False
+    )
+    
     add_cap: EnumProperty(
         name='Fill',
         description='Fill the icicle cone base',
