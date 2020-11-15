@@ -55,7 +55,7 @@ class OBJECT_PT_IciclePanel(Panel):
         
         layout.prop(icicle_props, 'max_its')
 
-        layout.prop(icicle_props, 'reselect_base')
+        # layout.prop(icicle_props, 'reselect_base')
 
         layout.prop(icicle_props, 'delete_previous')
 

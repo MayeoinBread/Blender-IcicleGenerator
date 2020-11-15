@@ -225,11 +225,11 @@ class WM_OT_GenIcicle(Operator):
             self.add_icicles(context)
         
         # Reselect the initial selection if desired
-        if ice_props.reselect_base:
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bm.edges.ensure_lookup_table()
-            for e in original_edges:
-                e.select = True
+        # if ice_props.reselect_base:
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bm.edges.ensure_lookup_table()
+        for e in original_edges:
+            e.select = True
 
     def execute(self, context):
         scene = bpy.context.scene
