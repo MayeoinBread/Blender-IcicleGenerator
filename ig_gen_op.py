@@ -118,8 +118,8 @@ class WM_OT_GenIcicle(Operator):
         if wh_ratio < 1:
             max_cuts = min(1, self.ice_prop.subdivs)
         else:
-            max_cuts = ice_prop.subdivs
-        num_cuts = random.randint(1, max_cuts)
+            max_cuts = self.ice_prop.subdivs
+        num_cuts = random.randint(0, max_cuts)
 
         # List to hold calculated points to add cones
         edge_points = []
@@ -146,16 +146,20 @@ class WM_OT_GenIcicle(Operator):
             it_rad = min(self.ice_prop.min_rad + (rad_dif * random.random()), self.ice_prop.max_rad)
             it_depth = min(self.ice_prop.min_depth + (depth_dif * random.random()), self.ice_prop.max_depth)
             wh_ratio = it_depth / it_rad
-            if wh_ratio < 1:
-                max_cuts = min(1, self.ice_prop.subdivs)
+            if self.ice_prop.subdivs > 0:
+                if wh_ratio < 1:
+                    max_cuts = min(1, self.ice_prop.subdivs)
+                else:
+                    max_cuts = self.ice_prop.subdivs
+                num_cuts = random.randint(1, max_cuts)
             else:
-                max_cuts = self.ice_prop.subdivs
-            num_cuts = random.randint(1, max_cuts)
+                num_cuts = 0
 
             # Increment by 1, check for max reached
             c += 1
             if c >= iterations:
-                print ('Maximum iterations reached on edge')
+                self.max_its_reached = True
+                # print ('Maximum iterations reached on edge')
 
         # Loop through list of calculated points and add a cone
         # Then subdivide and shift to alter the straightness
@@ -239,6 +243,7 @@ class WM_OT_GenIcicle(Operator):
             ice_prop.max_depth = ice_prop.min_depth
         
         self.verticalEdges = False
+        self.max_its_reached = False
 
         # Run the function
         obj = context.active_object
@@ -247,10 +252,16 @@ class WM_OT_GenIcicle(Operator):
             if obj.mode != 'EDIT':
                 self.report({'INFO'}, "Icicles cannot be added outside Edit mode")
             else:
-                self.runIt(context)
-                
+                try:
+                    self.runIt(context)
+                except IndexError:
+                    self.report({'ERROR'}, "Issue generating icicles")
+
                 if self.verticalEdges:
                     self.report({'INFO'}, "Some edges were skipped during icicle creation - line too steep")
+
+                if self.max_its_reached:
+                    self.report({'INFO'}, "Maximum iterations reached on some edges, may be missing some icicles")
         else:
             self.report({'INFO'}, "Cannot generate on non-Mesh object")
         

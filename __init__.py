@@ -40,7 +40,7 @@ class IcicleProperties(PropertyGroup):
         name='Max Radius',
         description='Maximum radius of a cone',
         default=0.15,
-        min=0.001,
+        min=0.01,
         max=10.0,
         unit='LENGTH'
     )
@@ -49,7 +49,7 @@ class IcicleProperties(PropertyGroup):
         name='Min Radius',
         description='Minimum radius of a cone',
         default=0.025,
-        min=0.001,
+        min=0.01,
         max=10.0,
         unit='LENGTH'
     )
@@ -58,7 +58,7 @@ class IcicleProperties(PropertyGroup):
         name='Max Depth',
         description='Maximum depth (height) of a cone',
         default=2.0,
-        min=0.0,
+        min=0.01,
         max=100.0,
         unit='LENGTH'
     )
@@ -67,7 +67,7 @@ class IcicleProperties(PropertyGroup):
         name='Min Depth',
         description='Minimum depth (height) of a cone',
         default=1.5,
-        min=0.0,
+        min=0.01,
         max=100.0,
         unit='LENGTH'
     )
