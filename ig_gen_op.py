@@ -124,8 +124,7 @@ class WM_OT_GenIcicle(Operator):
         # List to hold calculated points to add cones
         edge_points = []
 
-        c = 0
-        while c_length < total_length and c < iterations:
+        while c_length < total_length:
             # Check that 2 * min_rad can fit inside the remaining space
             if (total_length - c_length) < (2 * self.ice_prop.min_rad):
                 break
@@ -141,6 +140,8 @@ class WM_OT_GenIcicle(Operator):
                 # Set up a random variable to offset the subdivisions on the icicle if added
                 t_rand = min(it_rad * 0.45, it_rad) * self.pos_neg()
                 edge_points.append((t_co, it_rad, it_depth, num_cuts, t_rand))
+                # Reset iteration counter (shouldn't carry, only comes in if we're stuck on a particuar icicle)
+                c = 0
 
             # Re-calculate values for next iteration
             it_rad = min(self.ice_prop.min_rad + (rad_dif * random.random()), self.ice_prop.max_rad)
@@ -159,6 +160,7 @@ class WM_OT_GenIcicle(Operator):
             c += 1
             if c >= iterations:
                 self.max_its_reached = True
+                break
                 # print ('Maximum iterations reached on edge')
 
         # Loop through list of calculated points and add a cone
